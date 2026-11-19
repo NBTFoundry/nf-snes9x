@@ -190,6 +190,45 @@ qnx-check: qnx
 		$(QNX_NM) -D $(QNX_APP)-unstripped | grep -qw kdMain || { echo "kdMain is not exported"; exit 1; }; \
 		echo "OK: QNX binary ELF/ABI symbols verified, kdMain exported"
 
+# --- A module: built without the QNX SDP, run by nbt-runner (sdk/module) ---
+# The same core and application, compiled with Clang against picolibc and
+# libc++ (no compat header: those gaps are the QNX 6.6 libstdc++'s).
+MOD_CORE_CXXFLAGS := $(NBT_MOD_CXXFLAGS) -O2 -std=c++11 -w -fno-exceptions -fno-rtti $(CORE_INC) $(CORE_DEFS)
+MOD_CORE_CFLAGS := $(NBT_MOD_CFLAGS) -O2 -std=gnu99 -w $(CORE_INC) $(CORE_DEFS)
+MOD_APP_CXXFLAGS := $(NBT_MOD_CXXFLAGS) -O2 -std=c++11 -Wall -Wextra -Werror -fno-exceptions -fno-rtti \
+	$(APP_INC)
+MOD_APP := $(BUILD_DIR)/nbt-snes9x.so
+# Snes9x's own licence (non-commercial, not GPL) and this application's.
+MOD_APP_LICENSE := LicenseRef-Snes9x AND MPL-2.0
+
+$(OBJ_DIR)/mod/core/%.o: $(CORE_DIR)/%.cpp | nbt-sdk-mod
+	@mkdir -p $(dir $@)
+	$(NBT_MOD_CXX) $(MOD_CORE_CXXFLAGS) -MMD -MP -c $< -o $@
+
+$(OBJ_DIR)/mod/core/%.o: $(CORE_DIR)/%.c | nbt-sdk-mod
+	@mkdir -p $(dir $@)
+	$(NBT_MOD_CC) $(MOD_CORE_CFLAGS) -MMD -MP -c $< -o $@
+
+$(OBJ_DIR)/mod/src/%.o: src/%.cpp | nbt-sdk-mod
+	@mkdir -p $(dir $@)
+	$(NBT_MOD_CXX) $(MOD_APP_CXXFLAGS) -MMD -MP -c $< -o $@
+
+MOD_OBJ := $(call core_objs,mod) $(call app_objs,mod)
+
+$(MOD_APP): $(MOD_OBJ) $(NBT_SDK_MOD_DEPS)
+	$(call nbt_module_link,$@,$(MOD_OBJ),$(MOD_APP_LICENSE))
+
+.PHONY: module module-bundle
+module: $(MOD_APP)
+
+# For a car test on today's NBT Manager: package it with
+#   make package PACKAGE_INPUT=build/nbt-snes9x-bundle ...
+MOD_BUNDLE := $(BUILD_DIR)/nbt-snes9x-bundle
+$(MOD_BUNDLE): $(MOD_APP) $(NBT_SDK_RUNNER)
+	$(NBT_SDK_BUNDLE) $(MOD_APP) $@
+
+module-bundle: $(MOD_BUNDLE)
+
 # --- The signed package (bridge 1.5: the games come through `files`) ---
 PACKAGE_INPUT ?= $(QNX_APP)
 PACKAGE := $(BUILD_DIR)/snes9x-$(APP_VERSION).nbt
