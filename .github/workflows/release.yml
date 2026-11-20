@@ -13,10 +13,12 @@ permissions: {}
 
 jobs:
   release:
-    uses: NBTFoundry/manager/.github/workflows/app-release.yml@f9e3d34de31475df41e44821b56f33da3c93a374 # manager main
+    uses: NBTFoundry/manager/.github/workflows/app-release.yml@d8ffcb1ecd7dad5a358b599458937223f5552001 # manager main
     permissions:
       contents: write
       packages: read
+    # The apps key is an environment secret; a called workflow sees it only so.
+    secrets: inherit
     with:
       sdk-ref: e46085f2550fdd7350aeab4bbf0b275319ecfef5
       build: make -j"$(nproc)" qnx qnx-check
