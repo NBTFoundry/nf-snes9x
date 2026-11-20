@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: MPL-2.0
+# Signed package from a vMAJOR.MINOR.PATCH tag: NBT Manager's application release
+# workflow builds it in the private QNX image (QNX 6.5 SP1 toolchain), signs it with
+# the apps key (this repository's "release" environment, after approval) and
+# publishes snes9x-X.Y.Z.nbt. The package is described by release/package.args.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions: {}
+
+jobs:
+  release:
+    uses: NBTFoundry/manager/.github/workflows/app-release.yml@f9e3d34de31475df41e44821b56f33da3c93a374 # manager main
+    permissions:
+      contents: write
+      packages: read
+    with:
+      sdk-ref: e46085f2550fdd7350aeab4bbf0b275319ecfef5
+      build: make -j"$(nproc)" qnx qnx-check
+      payload: build/nbt-snes9x-qnx
