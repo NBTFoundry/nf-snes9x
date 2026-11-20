@@ -1,0 +1,30 @@
+# The package description for tools/package.py (NBTFoundry/manager): one argument
+# per line. `make package` and the release workflow both use it; they add the
+# version, sequence, key, output and executable. Bridge 1.5: the games come
+# through `files`.
+--app
+snes9x
+--compat
+nbt_6.5_armv7
+--bridge
+1.5
+--bridge-uses
+show,controller,files
+--bridge-optional
+status,live-settings,gamepad
+--bridge-files
+sfc,smc,fig,swc|16|1024
+--setting
+aspect|Aspect|4-3|4-3,pixel,full
+--setting
+filter|Filter|sharp|sharp,smooth,nearest
+--setting
+region|Region|auto|auto,ntsc,pal
+--setting
+frameskip|Frame skip|off|off,auto,1,2
+--setting
+sound|Sound|on|on,off
+--setting
+show_fps|Show FPS|off|off,on
+--setting
+debug_log|Debug log|off|off,on

@@ -118,7 +118,8 @@ The desktop build lists the games in `NBT_FILES_DIR` and keeps saves in
 `NBT_FILES_DIR=~/snes NBT_DATA_DIR=/tmp/snes9x ./build/nbt-snes9x-host`. The
 tests make a small cartridge of their own; no game is needed.
 
-Head unit (QNX 6.5 ARMv7, built with the QNX 6.6 toolchain):
+Head unit (QNX 6.5 ARMv7), built with the QNX 6.5 SP1 toolchain (GCC 4.8.3) that
+releases use, or the QNX 6.6 one:
 
 ```sh
 make QNX_ENV=/path/to/qnx-env.sh QNX_SCREEN_LIBDIR=/path/to/screen/lib qnx qnx-check
@@ -126,16 +127,23 @@ make QNX_ENV=… QNX_SCREEN_LIBDIR=… APP_KEY=/path/to/apps-signing-key.pem pac
 ```
 
 `package` signs `build/snes9x-<version>.nbt` with NBT Manager's packer
-(`../manager/tools/package.py`, or `NBT_MGR_DIR`).
+(`../manager/tools/package.py`, or `NBT_MGR_DIR`), described by
+`release/package.args`. Pushing a tag `vX.Y.Z` releases a signed package from CI
+(`.github/workflows/release.yml`, NBT Manager's `app-release.yml`), with package
+sequence `X*1000000 + Y*1000 + Z`.
+
+Built with the 6.6 toolchain, the binary imports `_Sinx` from `libm`, which the
+car's QNX 6.5 SP1 lacks; the SP1 toolchain's headers do not inline it.
 
 ### Snes9x on the QNX toolchain
 
 Upstream's libretro source list (`libretro/Makefile.common`) builds as C++11
-with gcc 4.9.3, unmodified; `src/compat/` fills the toolchain's gaps:
+with gcc 4.8.3 or 4.9.3, unmodified; `src/compat/` fills the toolchain's gaps:
 
 - `snes9x_qnx.h`, included before each core source: QNX's `<math.h>` brings
   Dinkumware type traits that clash with libstdc++'s unless those come first;
-  it declares `trunc` in `std` only; this libstdc++ has no `std::to_string`.
+  it declares `trunc` in `std` only (6.6), or only with `_HAS_C9X` (6.5); this
+  libstdc++ has no `std::to_string`.
 - qcc defines `__EXCEPTIONS` even with `-fno-exceptions`, which turns
   libstdc++'s `__try`/`__catch` into real ones: the build undefines it.
 - `libstdcxx_qnx.cpp`: `std::__throw_out_of_range_fmt`, which GCC 4.9's

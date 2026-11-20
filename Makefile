@@ -229,7 +229,7 @@ $(MOD_BUNDLE): $(MOD_APP) $(NBT_SDK_RUNNER)
 
 module-bundle: $(MOD_BUNDLE)
 
-# --- The signed package (bridge 1.5: the games come through `files`) ---
+# --- The signed package (release/package.args describes it) ---
 PACKAGE_INPUT ?= $(QNX_APP)
 PACKAGE := $(BUILD_DIR)/snes9x-$(APP_VERSION).nbt
 
@@ -237,23 +237,10 @@ package: $(PACKAGE_INPUT)
 	@test -f "$(APP_KEY)" || { echo "APP_KEY must name the RSA signing key"; exit 1; }
 	@test -f "$(NBT_MGR_DIR)/tools/package.py" || { echo "NBT_MGR_DIR=$(NBT_MGR_DIR) has no tools/package.py"; exit 1; }
 	rm -f $(PACKAGE)
-	python3 $(NBT_MGR_DIR)/tools/package.py \
-		--app snes9x \
+	python3 $(NBT_MGR_DIR)/tools/package.py @release/package.args \
 		--version "$(APP_VERSION)" \
 		--sequence "$(APP_SEQ)" \
-		--compat nbt_6.5_armv7 \
 		--key "$(APP_KEY)" \
-		--bridge 1.5 \
-		--bridge-uses show,controller,files \
-		--bridge-optional status,live-settings,gamepad \
-		--bridge-files "sfc,smc,fig,swc|16|1024" \
-		--setting "aspect|Aspect|4-3|4-3,pixel,full" \
-		--setting "filter|Filter|sharp|sharp,smooth,nearest" \
-		--setting "region|Region|auto|auto,ntsc,pal" \
-		--setting "frameskip|Frame skip|off|off,auto,1,2" \
-		--setting "sound|Sound|on|on,off" \
-		--setting "show_fps|Show FPS|off|off,on" \
-		--setting "debug_log|Debug log|off|off,on" \
 		--output $(PACKAGE) \
 		$(PACKAGE_INPUT)
 
