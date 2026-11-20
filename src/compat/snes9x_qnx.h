@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-/* Gaps of the QNX 6.6 toolchain (gcc 4.9.3, libstdc++) for upstream Snes9x,
+/* Gaps of the QNX toolchains (6.5 SP1 gcc 4.8.3, 6.6 gcc 4.9.3) for upstream Snes9x,
  * included before each core source of the QNX build (-include), so that the
  * submodule stays unmodified.
  *
@@ -13,6 +13,11 @@
 #define NBT_SNES9X_QNX_H
 
 #ifdef __cplusplus
+/* QNX 6.5's <math.h> declares the C99 functions (trunc) only with _HAS_C9X;
+ * 6.6's sets it already. */
+#ifndef _HAS_C9X
+#define _HAS_C9X 1
+#endif
 #include <type_traits>
 
 #include <math.h>
