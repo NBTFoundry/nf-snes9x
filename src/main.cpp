@@ -31,6 +31,7 @@ int main(int argc, char** argv) {
                                          4.0f / 3.0f,
                                          kMaxRomBytes,
                                          false /* no BIOS files */,
-                                         NULL /* each game one file: no game folders */};
+                                         NULL /* each game one file: no game folders */,
+                                         NULL /* games listed by their file names */};
   return nbt::retro::run(argc, argv, config);
 }

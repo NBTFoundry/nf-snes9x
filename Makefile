@@ -206,7 +206,7 @@ MOD_APP := $(BUILD_DIR)/nbt-snes9x.so
 # Snes9x's own licence (non-commercial, not GPL) and this application's.
 MOD_APP_LICENSE := LicenseRef-Snes9x AND MPL-2.0
 
-$(OBJ_DIR)/mod/core/%.o: $(CORE_DIR)/%.cpp | nbt-sdk-mod
+$(OBJ_DIR)/mod/core/%.o: $(CORE_DIR)/%.cpp src/compat/snes9x_aligned.h | nbt-sdk-mod
 	@mkdir -p $(dir $@)
 	$(NBT_MOD_CXX) $(MOD_CORE_CXXFLAGS) -MMD -MP -c $< -o $@
 
