@@ -139,16 +139,18 @@ QNX_C_VARIANT := -Vgcc_ntoarmv7le
 QNX_CPP_VARIANT := -Vgcc_ntoarmv7le_gpp
 # qcc defines __EXCEPTIONS even with -fno-exceptions, which turns libstdc++'s
 # __try/__catch into real ones; src/compat/snes9x_qnx.h fills the toolchain's
-# gaps for the core.
+# gaps for the core. The head unit stops a misaligned 16-bit load with SIGBUS
+# (dev122, Immediate16): the core reads memory byte by byte, as in the module
+# build (src/compat/snes9x_aligned.h; this gcc defines no __ARM_FEATURE_UNALIGNED).
 QNX_NO_EXCEPTIONS := -Wc,-fno-exceptions -Wc,-fno-rtti -Wp,-U__EXCEPTIONS
 QNX_CORE_CXXFLAGS := $(QNX_CPP_VARIANT) -D_QNX_SOURCE -O2 -Wc,-std=c++11 $(QNX_NO_EXCEPTIONS) -w \
-	-include src/compat/snes9x_qnx.h $(CORE_INC) $(CORE_DEFS)
+	-include src/compat/snes9x_qnx.h -include src/compat/snes9x_aligned.h $(CORE_INC) $(CORE_DEFS)
 QNX_CORE_CFLAGS := $(QNX_C_VARIANT) -D_QNX_SOURCE -O2 -Wc,-std=gnu99 -w $(CORE_INC) $(CORE_DEFS)
 QNX_APP_CXXFLAGS := $(QNX_CPP_VARIANT) -D_QNX_SOURCE -O2 -Wc,-std=c++11 $(QNX_NO_EXCEPTIONS) \
 	-Wc,-Wall -Wc,-Wextra $(APP_INC)
 QNX_DEPFLAGS = -Wp,-MMD,$(@:.o=.d) -Wp,-MP -Wp,-MT,$@
 
-$(OBJ_DIR)/qnx/core/%.o: $(CORE_DIR)/%.cpp src/compat/snes9x_qnx.h | qnx-env
+$(OBJ_DIR)/qnx/core/%.o: $(CORE_DIR)/%.cpp src/compat/snes9x_qnx.h src/compat/snes9x_aligned.h | qnx-env
 	@mkdir -p $(dir $@)
 	. "$(QNX_ENV)" && $(QCC) $(QNX_CORE_CXXFLAGS) $(QNX_DEPFLAGS) -c $< -o $@
 
@@ -192,8 +194,11 @@ qnx-check: qnx
 
 # --- A module: built without the QNX SDP, run by nbt-runner (sdk/module) ---
 # The same core and application, compiled with Clang against picolibc and
-# libc++ (no compat header: those gaps are the QNX 6.6 libstdc++'s).
-MOD_CORE_CXXFLAGS := $(NBT_MOD_CXXFLAGS) -O2 -std=c++11 -w -fno-exceptions -fno-rtti $(CORE_INC) $(CORE_DEFS)
+# libc++ (no QNX compat header: those gaps are the QNX 6.6 libstdc++'s). The
+# core reads memory byte by byte where port.h would make unaligned accesses
+# (src/compat/snes9x_aligned.h).
+MOD_CORE_CXXFLAGS := $(NBT_MOD_CXXFLAGS) -O2 -std=c++11 -w -fno-exceptions -fno-rtti \
+	-include src/compat/snes9x_aligned.h $(CORE_INC) $(CORE_DEFS)
 MOD_CORE_CFLAGS := $(NBT_MOD_CFLAGS) -O2 -std=gnu99 -w $(CORE_INC) $(CORE_DEFS)
 MOD_APP_CXXFLAGS := $(NBT_MOD_CXXFLAGS) -O2 -std=c++11 -Wall -Wextra -Werror -fno-exceptions -fno-rtti \
 	$(APP_INC)
@@ -228,6 +233,14 @@ $(MOD_BUNDLE): $(MOD_APP) $(NBT_SDK_RUNNER)
 	$(NBT_SDK_BUNDLE) $(MOD_APP) $@
 
 module-bundle: $(MOD_BUNDLE)
+
+# The core as the module build compiles it (src/compat/snes9x_aligned.h), run
+# by the tests on the desktop with the alignment sanitizer: the head unit
+# stops a misaligned access with SIGBUS, which x86 never shows.
+.PHONY: test-align
+test-align:
+	$(MAKE) BUILD_DIR=$(BUILD_DIR)/align test-asan CORE_DEFS="$(CORE_DEFS) \
+		-include $(CURDIR)/src/compat/snes9x_aligned.h -fsanitize=alignment -fno-sanitize-recover=alignment"
 
 # --- The signed package (release/package.args describes it) ---
 PACKAGE_INPUT ?= $(QNX_APP)
