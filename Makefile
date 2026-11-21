@@ -223,16 +223,8 @@ MOD_OBJ := $(call core_objs,mod) $(call app_objs,mod)
 $(MOD_APP): $(MOD_OBJ) $(NBT_SDK_MOD_DEPS)
 	$(call nbt_module_link,$@,$(MOD_OBJ),$(MOD_APP_LICENSE))
 
-.PHONY: module module-bundle
+.PHONY: module
 module: $(MOD_APP)
-
-# For a car test on today's NBT Manager: package it with
-#   make package PACKAGE_INPUT=build/nbt-snes9x-bundle ...
-MOD_BUNDLE := $(BUILD_DIR)/nbt-snes9x-bundle
-$(MOD_BUNDLE): $(MOD_APP) $(NBT_SDK_RUNNER)
-	$(NBT_SDK_BUNDLE) $(MOD_APP) $@
-
-module-bundle: $(MOD_BUNDLE)
 
 # The core as the module build compiles it (src/compat/snes9x_aligned.h), run
 # by the tests on the desktop with the alignment sanitizer: the head unit
@@ -243,7 +235,9 @@ test-align:
 		-include $(CURDIR)/src/compat/snes9x_aligned.h -fsanitize=alignment -fno-sanitize-recover=alignment"
 
 # --- The signed package (release/package.args describes it) ---
-PACKAGE_INPUT ?= $(QNX_APP)
+# The module: NBT Manager's nbt-runner runs it (bridge 1.7, runner). The QNX
+# build stays for comparisons on the car; it is not what packages carry.
+PACKAGE_INPUT ?= $(MOD_APP)
 PACKAGE := $(BUILD_DIR)/snes9x-$(APP_VERSION).nbt
 
 package: $(PACKAGE_INPUT)

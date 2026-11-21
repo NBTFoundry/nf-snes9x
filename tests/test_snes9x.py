@@ -189,11 +189,16 @@ class PackageTest(unittest.TestCase):
             subprocess.run(["openssl", "genrsa", "-out", key, "3072"], check=True, capture_output=True)
             subprocess.run(["openssl", "rsa", "-in", key, "-pubout", "-out", public], check=True,
                            capture_output=True)
-            binary = tmp / "stand-in.elf"  # for the QNX build
-            elf = bytearray(128)
+            # A stand-in for the module: ARM ET_DYN with the SDK's NBT ABI note.
+            binary = tmp / "stand-in.so"
+            note = struct.pack("<III", 4, 12, 1) + b"NBT\0" + struct.pack("<III", 1, 1, 1)
+            elf = bytearray(52)
             elf[:7] = b"\x7fELF\x01\x01\x01"
-            elf[16:20] = b"\x02\x00\x28\x00"
-            binary.write_bytes(bytes(elf))
+            struct.pack_into("<HHI", elf, 16, 3, 40, 1)
+            struct.pack_into("<I", elf, 28, 52)
+            struct.pack_into("<HHH", elf, 40, 52, 32, 1)
+            phdr = struct.pack("<IIIIIIII", 4, 84, 0, 0, len(note), len(note), 4, 4)
+            binary.write_bytes(bytes(elf) + phdr + note)
             subprocess.run(["make", "-s", "-C", str(ROOT), "package", f"BUILD_DIR={tmp}",
                             f"PACKAGE_INPUT={binary}", f"APP_KEY={key}", f"NBT_MGR_DIR={MGR_DIR}",
                             "APP_VERSION=1.63.0"], check=True, capture_output=True)
@@ -201,8 +206,8 @@ class PackageTest(unittest.TestCase):
             out = subprocess.run([str(verify), str(package), str(public), "snes9x", "nbt_6.5_armv7"],
                                  check=True, capture_output=True, text=True).stdout
             self.assertIn("app=snes9x\n", out)
-            self.assertIn("bridge=1.5\n", out)
-            self.assertIn("bridge-uses=show,controller,files\n", out)
+            self.assertIn("bridge=1.7\n", out)
+            self.assertIn("bridge-uses=show,controller,files,runner\n", out)
             self.assertIn("bridge-optional=status,live-settings,gamepad\n", out)
             raw = package.read_bytes()
             manifest = raw[24 : 24 + int.from_bytes(raw[8:12], "big")].decode("ascii")

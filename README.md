@@ -96,7 +96,9 @@ Changed from the phone app or NBT Manager's settings page; they apply at once.
 
 ## Bridge
 
-The package declares bridge 1.5: `show`, `controller` and `files` required,
+The package carries the module (built without the QNX SDP, run by NBT
+Manager's `nbt-runner`) and declares bridge 1.7: `show`, `controller`, `files`
+and `runner` required,
 `status`, `live-settings` and `gamepad` optional, and the files policy
 `sfc,smc,fig,swc|16|1024`. Snes9x reports the game played as its status. NBT
 Manager keeps its standard error as its log (shown, shared and cleared from the
@@ -118,19 +120,25 @@ The desktop build lists the games in `NBT_FILES_DIR` and keeps saves in
 `NBT_FILES_DIR=~/snes NBT_DATA_DIR=/tmp/snes9x ./build/nbt-snes9x-host`. The
 tests make a small cartridge of their own; no game is needed.
 
-Head unit (QNX 6.5 ARMv7), built with the QNX 6.5 SP1 toolchain (GCC 4.8.3) that
-releases use, or the QNX 6.6 one:
+Head unit (QNX 6.5 ARMv7): the module, built with the SDK's open toolchain
+(`make -C ../sdk toolchain` once) and nothing from the QNX SDP. NBT Manager
+releases with bridge 1.7 run it with their `nbt-runner`:
 
 ```sh
-make QNX_ENV=/path/to/qnx-env.sh QNX_SCREEN_LIBDIR=/path/to/screen/lib qnx qnx-check
-make QNX_ENV=… QNX_SCREEN_LIBDIR=… APP_KEY=/path/to/apps-signing-key.pem package
+make -j"$(nproc)" module                                       # build/nbt-snes9x.so
+make APP_KEY=/path/to/apps-signing-key.pem package             # build/snes9x-<version>.nbt
 ```
 
-`package` signs `build/snes9x-<version>.nbt` with NBT Manager's packer
+`package` signs the module with NBT Manager's packer
 (`../manager/tools/package.py`, or `NBT_MGR_DIR`), described by
 `release/package.args`. Pushing a tag `vX.Y.Z` releases a signed package from CI
-(`.github/workflows/release.yml`, NBT Manager's `app-release.yml`), with package
-sequence `X*1000000 + Y*1000 + Z`.
+(`.github/workflows/release.yml`, NBT Manager's `app-release.yml` with
+`qnx: false`: a plain runner, no private image), with package sequence
+`X*1000000 + Y*1000 + Z`.
+
+The QNX SDP build stays for comparisons on the car (`make QNX_ENV=…
+QNX_SCREEN_LIBDIR=… qnx qnx-check`, the QNX 6.5 SP1 toolchain); packages do not
+carry it.
 
 Built with the 6.6 toolchain, the binary imports `_Sinx` from `libm`, which the
 car's QNX 6.5 SP1 lacks; the SP1 toolchain's headers do not inline it.

@@ -1,15 +1,16 @@
 # The package description for tools/package.py (NBTFoundry/manager): one argument
 # per line. `make package` and the release workflow both use it; they add the
-# version, sequence, key, output and executable. Bridge 1.5: the games come
-# through `files`.
+# version, sequence, key, output and executable. Bridge 1.7: the payload is a
+# module built without the QNX SDP, run by NBT Manager's nbt-runner (runner);
+# the games come through `files`.
 --app
 snes9x
 --compat
 nbt_6.5_armv7
 --bridge
-1.5
+1.7
 --bridge-uses
-show,controller,files
+show,controller,files,runner
 --bridge-optional
 status,live-settings,gamepad
 --bridge-files

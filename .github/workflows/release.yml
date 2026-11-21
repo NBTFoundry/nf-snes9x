@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: MPL-2.0
 # Signed package from a vMAJOR.MINOR.PATCH tag: NBT Manager's application release
-# workflow builds it in the private QNX image (QNX 6.5 SP1 toolchain), signs it with
-# the apps key (this repository's "release" environment, after approval) and
-# publishes snes9x-X.Y.Z.nbt. The package is described by release/package.args.
+# workflow builds the module without the QNX SDP (the SDK's own toolchain, no
+# private image), signs it with the apps key (this repository's "release"
+# environment, after approval) and publishes snes9x-X.Y.Z.nbt. The package is
+# described by release/package.args; NBT Manager's nbt-runner runs it.
 name: Release
 
 on:
@@ -13,13 +14,14 @@ permissions: {}
 
 jobs:
   release:
-    uses: NBTFoundry/manager/.github/workflows/app-release.yml@d8ffcb1ecd7dad5a358b599458937223f5552001 # manager main
+    uses: NBTFoundry/manager/.github/workflows/app-release.yml@de11ef614d47ef94170cf2711477030278c981b9 # manager runner-ships
     permissions:
       contents: write
       packages: read
     # The apps key is an environment secret; a called workflow sees it only so.
     secrets: inherit
     with:
-      sdk-ref: e46085f2550fdd7350aeab4bbf0b275319ecfef5
-      build: make -j"$(nproc)" qnx qnx-check
-      payload: build/nbt-snes9x-qnx
+      sdk-ref: 2302382c63aad00e9d0e44a0f5d26be25146964e
+      qnx: false
+      build: make -j"$(nproc)" module
+      payload: build/nbt-snes9x.so
