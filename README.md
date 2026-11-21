@@ -122,7 +122,7 @@ tests make a small cartridge of their own; no game is needed.
 
 Head unit (QNX 6.5 ARMv7): the module, built with the SDK's open toolchain
 (`make -C ../sdk toolchain` once) and nothing from the QNX SDP. NBT Manager
-releases with bridge 1.7 run it with their `nbt-runner`:
+0.2.0 and later (bridge 1.7) run it with their `nbt-runner`:
 
 ```sh
 make -j"$(nproc)" module                                       # build/nbt-snes9x.so

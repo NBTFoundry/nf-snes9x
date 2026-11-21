@@ -14,14 +14,14 @@ permissions: {}
 
 jobs:
   release:
-    uses: NBTFoundry/manager/.github/workflows/app-release.yml@de11ef614d47ef94170cf2711477030278c981b9 # manager runner-ships
+    uses: NBTFoundry/manager/.github/workflows/app-release.yml@aa7b1b43d21fa80c5d0bc29030af0535ecbb6f6b # manager v0.2.0
     permissions:
       contents: write
       packages: read
     # The apps key is an environment secret; a called workflow sees it only so.
     secrets: inherit
     with:
-      sdk-ref: 2302382c63aad00e9d0e44a0f5d26be25146964e
+      sdk-ref: 44dc6ab97135505008907673bc6426b9da27d271
       qnx: false
       build: make -j"$(nproc)" module
       payload: build/nbt-snes9x.so
