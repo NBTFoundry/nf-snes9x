@@ -126,7 +126,7 @@ check-static-init: $(call app_objs,host)
 	+@$(NBT_SDK_MAKE) check-static-init
 
 format:
-	clang-format -i src/*.cpp src/*.hpp src/compat/*.h tests/*.cpp
+	clang-format -i src/*.cpp src/*.hpp src/compat/*.h src/compat/*.c tests/*.cpp
 
 # --- The head unit: a module, built without the QNX SDP, run by nbt-runner
 # (sdk/module). The same core and application, compiled with the NBT toolchain
@@ -154,7 +154,16 @@ $(OBJ_DIR)/mod/src/%.o: src/%.cpp $(call stamp,mod) | nbt-sdk-mod
 	@mkdir -p $(dir $@)
 	$(NBT_MOD_CXX) $(MOD_APP_CXXFLAGS) -MMD -MP -c $< -o $@
 
-MOD_OBJ := $(call core_objs,mod) $(call app_objs,mod)
+$(OBJ_DIR)/mod/compat/%.o: src/compat/%.c $(call stamp,mod) | nbt-sdk-mod
+	@mkdir -p $(dir $@)
+	$(NBT_MOD_CC) $(MOD_CORE_CFLAGS) -MMD -MP -c $< -o $@
+
+# Snes9x's NTSC filter (filter/snes_ntsc.c) is LGPL-2.1, and a module runs
+# inside nbt-runner, which links QNX code: LGPL code only runs in a guest. The
+# application never turns the filter on; src/compat/snes_ntsc_off.c stands in
+# for it so libretro.cpp links. The desktop builds keep upstream's.
+MOD_OBJ := $(filter-out %/filter/snes_ntsc.o,$(call core_objs,mod)) $(call app_objs,mod) \
+	$(OBJ_DIR)/mod/compat/snes_ntsc_off.o
 
 $(MOD_APP): $(MOD_OBJ) $(NBT_SDK_MOD_DEPS)
 	$(call nbt_module_link,$@,$(MOD_OBJ),$(MOD_APP_LICENSE))

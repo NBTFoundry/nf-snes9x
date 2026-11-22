@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: MPL-2.0
 """Writes legal/NOTICE.txt: the notices the application's module carries.
 
-Ours (MPL-2.0), Snes9x's licence and the LGPL of its NTSC filter, the
-third-party notices of the NBT App SDK it links (NBT_SDK_DIR, default
+Ours (MPL-2.0), Snes9x's licence (the module leaves out its LGPL NTSC
+filter: src/compat/snes_ntsc_off.c stands in for it), the third-party notices of the NBT App SDK it links (NBT_SDK_DIR, default
 ../sdk), and picolibc, which the NBT toolchain's runtime links statically
 (NBT_TOOLCHAIN, default the SDK's installed release). Run again when the
 pin, the SDK or the toolchain changes.
@@ -55,9 +55,6 @@ def main():
         + (ROOT / "LICENSES/MPL-2.0.txt").read_text(),
         "Snes9x 1.63, the emulator (third_party/snes9x)\nhttps://github.com/snes9xgit/snes9x\n\n"
         + (CORE / "LICENSE").read_text(),
-        "snes_ntsc, Snes9x's NTSC filter (third_party/snes9x/filter/snes_ntsc.c)\n"
-        "Copyright (C) 2006-2007 Shay Green. Used in Snes9x under the GNU LGPL 2.1:\n\n"
-        + (CORE / "filter/snes_ntsc-license.txt").read_text(),
         "libretro.h and libretro-common headers in Snes9x's libretro port (third_party/snes9x/libretro)\n"
         "Copyright (C) 2010-2018 The RetroArch team; MIT License, the text below with libretro.h.\n",
         sdk_notices,

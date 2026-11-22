@@ -135,7 +135,10 @@ make APP_KEY=/path/to/apps-signing-key.pem package             # build/snes9x-<v
 The head unit stops a misaligned access with SIGBUS, which x86 never shows:
 the module's core reads memory byte by byte where `port.h` would make unaligned
 accesses (`src/compat/snes9x_aligned.h`), and `test-align` runs the tests with
-that header under the alignment sanitizer. `package` signs the module with NBT
+that header under the alignment sanitizer. The module leaves out Snes9x's NTSC
+filter (`filter/snes_ntsc.c`, LGPL-2.1: a module runs inside `nbt-runner`,
+which links QNX code, and LGPL code only runs in a guest); the application
+never turns it on, and `src/compat/snes_ntsc_off.c` stands in for it. `package` signs the module with NBT
 Manager's packer (`../manager/tools/package.py`, or `NBT_MGR_DIR`), described
 by `release/package.args`; `make package-args` writes the Snes9x version the
 pin builds, and `make test` fails when it lags. `make notice` writes
@@ -171,7 +174,7 @@ publishes `snes9x-X.Y.Z.nbt`, sequence `X*1000000 + Y*1000 + Z`.
 | `third_party/snes9x/` | Snes9x 1.63, unmodified (submodule) |
 | `src/main.cpp` | The application: the SDK's libretro host with Snes9x's settings |
 | `src/controls.*` | The SNES layout for each pad family, the iDrive controller and the keyboard |
-| `src/compat/` | Byte-wise memory access for the head unit (`snes9x_aligned.h`) |
+| `src/compat/` | Byte-wise memory access for the head unit (`snes9x_aligned.h`); the module's stand-in for the NTSC filter (`snes_ntsc_off.c`) |
 | `tests/` | Controls unit test (`controls_test.cpp`), play and package tests (`test_snes9x.py`) |
 | `tools/` | Snes9x version for the package (`package_version.py`), notices (`make_notice.py`) |
 | `release/` | The package description and the SDK commit to build against |
