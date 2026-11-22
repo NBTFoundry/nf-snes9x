@@ -21,7 +21,7 @@ jobs:
     # The apps key is an environment secret; a called workflow sees it only so.
     secrets: inherit
     with:
-      sdk-ref: 44dc6ab97135505008907673bc6426b9da27d271
+      sdk-ref: 071cd64e7600911e8ba5efae13a9308c2948be71
       qnx: false
       build: make -j"$(nproc)" module
       payload: build/nbt-snes9x.so
