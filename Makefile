@@ -25,6 +25,12 @@ QNX_NM ?= ntoarmv7-nm
 
 NBT_SDK_BUILD_DIR := $(abspath $(BUILD_DIR))/sdk
 include $(NBT_SDK_DIR)/nbt-sdk.mk
+# Each kind of object rebuilds when its compile command changes (the SDK's
+# nbt-stamp.mk; the stamps are written at the end of this file).
+stamp = $(OBJ_DIR)/$(1).stamp
+ifeq ($(value nbt_stamp),)
+$(error $(NBT_SDK_ROOT) has no nbt-stamp.mk: update that SDK checkout)
+endif
 
 # --- Snes9x: upstream's libretro source list, unmodified (third_party/snes9x) ---
 CORE_DIR := third_party/snes9x
@@ -52,15 +58,15 @@ ASAN_FLAGS := -O1 -g -fsanitize=address -fno-omit-frame-pointer
 all: host test
 
 # --- Host (Linux, X11) ---
-$(OBJ_DIR)/host/core/%.o: $(CORE_DIR)/%.cpp
+$(OBJ_DIR)/host/core/%.o: $(CORE_DIR)/%.cpp $(call stamp,host)
 	@mkdir -p $(dir $@)
 	$(CXX) $(CORE_INC) $(CORE_DEFS) $(CORE_CXXFLAGS) -MMD -MP -c $< -o $@
 
-$(OBJ_DIR)/host/core/%.o: $(CORE_DIR)/%.c
+$(OBJ_DIR)/host/core/%.o: $(CORE_DIR)/%.c $(call stamp,host)
 	@mkdir -p $(dir $@)
 	$(CC) $(CORE_INC) $(CORE_DEFS) $(CORE_CFLAGS) -MMD -MP -c $< -o $@
 
-$(OBJ_DIR)/host/src/%.o: src/%.cpp
+$(OBJ_DIR)/host/src/%.o: src/%.cpp $(call stamp,host)
 	@mkdir -p $(dir $@)
 	$(CXX) $(APP_INC) $(APP_CXXFLAGS) -MMD -MP -c $< -o $@
 
@@ -72,15 +78,15 @@ host: $(HOST_APP) $(BUILD_DIR)/controls-test
 
 # --- Sanitizer build: the core and ours under AddressSanitizer, ours under
 # UBSan too (upstream's shifts and casts are the core's own business) ---
-$(OBJ_DIR)/asan/core/%.o: $(CORE_DIR)/%.cpp
+$(OBJ_DIR)/asan/core/%.o: $(CORE_DIR)/%.cpp $(call stamp,asan)
 	@mkdir -p $(dir $@)
 	$(CXX) $(CORE_INC) $(CORE_DEFS) $(CORE_CXXFLAGS) $(ASAN_FLAGS) -MMD -MP -c $< -o $@
 
-$(OBJ_DIR)/asan/core/%.o: $(CORE_DIR)/%.c
+$(OBJ_DIR)/asan/core/%.o: $(CORE_DIR)/%.c $(call stamp,asan)
 	@mkdir -p $(dir $@)
 	$(CC) $(CORE_INC) $(CORE_DEFS) $(CORE_CFLAGS) $(ASAN_FLAGS) -MMD -MP -c $< -o $@
 
-$(OBJ_DIR)/asan/src/%.o: src/%.cpp
+$(OBJ_DIR)/asan/src/%.o: src/%.cpp $(call stamp,asan)
 	@mkdir -p $(dir $@)
 	$(CXX) $(APP_INC) $(APP_CXXFLAGS) $(ASAN_FLAGS) -fsanitize=undefined -MMD -MP -c $< -o $@
 
@@ -89,7 +95,7 @@ $(ASAN_APP): $(call core_objs,asan) $(call app_objs,asan) $(NBT_SDK_FRONT_ASAN_L
 		$(NBT_SDK_FRONT_ASAN_LIBS) $(LDFLAGS) $(NBT_SDK_HOST_LDLIBS) -o $@
 
 # --- Tests ---
-$(OBJ_DIR)/host/tests/%.o: tests/%.cpp
+$(OBJ_DIR)/host/tests/%.o: tests/%.cpp $(call stamp,host)
 	@mkdir -p $(dir $@)
 	$(CXX) $(APP_INC) $(APP_CXXFLAGS) -MMD -MP -c $< -o $@
 
@@ -150,19 +156,19 @@ QNX_APP_CXXFLAGS := $(QNX_CPP_VARIANT) -D_QNX_SOURCE -O2 -Wc,-std=c++11 $(QNX_NO
 	-Wc,-Wall -Wc,-Wextra $(APP_INC)
 QNX_DEPFLAGS = -Wp,-MMD,$(@:.o=.d) -Wp,-MP -Wp,-MT,$@
 
-$(OBJ_DIR)/qnx/core/%.o: $(CORE_DIR)/%.cpp src/compat/snes9x_qnx.h src/compat/snes9x_aligned.h | qnx-env
+$(OBJ_DIR)/qnx/core/%.o: $(CORE_DIR)/%.cpp src/compat/snes9x_qnx.h src/compat/snes9x_aligned.h $(call stamp,qnx) | qnx-env
 	@mkdir -p $(dir $@)
 	. "$(QNX_ENV)" && $(QCC) $(QNX_CORE_CXXFLAGS) $(QNX_DEPFLAGS) -c $< -o $@
 
-$(OBJ_DIR)/qnx/core/%.o: $(CORE_DIR)/%.c | qnx-env
+$(OBJ_DIR)/qnx/core/%.o: $(CORE_DIR)/%.c $(call stamp,qnx) | qnx-env
 	@mkdir -p $(dir $@)
 	. "$(QNX_ENV)" && $(QCC) $(QNX_CORE_CFLAGS) $(QNX_DEPFLAGS) -c $< -o $@
 
-$(OBJ_DIR)/qnx/src/%.o: src/%.cpp | qnx-env
+$(OBJ_DIR)/qnx/src/%.o: src/%.cpp $(call stamp,qnx) | qnx-env
 	@mkdir -p $(dir $@)
 	. "$(QNX_ENV)" && $(QCC) $(QNX_APP_CXXFLAGS) $(QNX_DEPFLAGS) -c $< -o $@
 
-$(OBJ_DIR)/qnx/compat/%.o: src/compat/%.cpp | qnx-env
+$(OBJ_DIR)/qnx/compat/%.o: src/compat/%.cpp $(call stamp,qnx) | qnx-env
 	@mkdir -p $(dir $@)
 	. "$(QNX_ENV)" && $(QCC) $(QNX_APP_CXXFLAGS) $(QNX_DEPFLAGS) -c $< -o $@
 
@@ -206,15 +212,15 @@ MOD_APP := $(BUILD_DIR)/nbt-snes9x.so
 # Snes9x's own licence (non-commercial, not GPL) and this application's.
 MOD_APP_LICENSE := LicenseRef-Snes9x AND MPL-2.0
 
-$(OBJ_DIR)/mod/core/%.o: $(CORE_DIR)/%.cpp src/compat/snes9x_aligned.h | nbt-sdk-mod
+$(OBJ_DIR)/mod/core/%.o: $(CORE_DIR)/%.cpp src/compat/snes9x_aligned.h $(call stamp,mod) | nbt-sdk-mod
 	@mkdir -p $(dir $@)
 	$(NBT_MOD_CXX) $(MOD_CORE_CXXFLAGS) -MMD -MP -c $< -o $@
 
-$(OBJ_DIR)/mod/core/%.o: $(CORE_DIR)/%.c | nbt-sdk-mod
+$(OBJ_DIR)/mod/core/%.o: $(CORE_DIR)/%.c $(call stamp,mod) | nbt-sdk-mod
 	@mkdir -p $(dir $@)
 	$(NBT_MOD_CC) $(MOD_CORE_CFLAGS) -MMD -MP -c $< -o $@
 
-$(OBJ_DIR)/mod/src/%.o: src/%.cpp | nbt-sdk-mod
+$(OBJ_DIR)/mod/src/%.o: src/%.cpp $(call stamp,mod) | nbt-sdk-mod
 	@mkdir -p $(dir $@)
 	$(NBT_MOD_CXX) $(MOD_APP_CXXFLAGS) -MMD -MP -c $< -o $@
 
@@ -256,3 +262,12 @@ clean:
 
 DEPS := $(shell find $(OBJ_DIR) -name '*.d' 2>/dev/null)
 -include $(DEPS)
+
+$(call nbt_stamp,$(call stamp,host),$(CC) $(CXX) $(CORE_INC) $(CORE_DEFS) $(CORE_CXXFLAGS) | $(CORE_CFLAGS) \
+	| $(APP_INC) $(APP_CXXFLAGS),$(CC) $(CXX))
+$(call nbt_stamp,$(call stamp,asan),$(CC) $(CXX) $(CORE_INC) $(CORE_DEFS) $(CORE_CXXFLAGS) | $(CORE_CFLAGS) \
+	| $(APP_INC) $(APP_CXXFLAGS) | $(ASAN_FLAGS) -fsanitize=undefined,$(CC) $(CXX))
+$(call nbt_stamp,$(call stamp,qnx),$(if $(QNX_ENV),$(QNX_ENV) $(QCC) $(QNX_CORE_CXXFLAGS) | $(QNX_CORE_CFLAGS) \
+	| $(QNX_APP_CXXFLAGS)))
+$(call nbt_stamp,$(call stamp,mod),$(NBT_MOD_CC) $(MOD_CORE_CXXFLAGS) | $(MOD_CORE_CFLAGS) | $(MOD_APP_CXXFLAGS),, \
+	$(NBT_TOOLCHAIN)/VERSION)
