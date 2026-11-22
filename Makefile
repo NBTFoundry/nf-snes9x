@@ -11,17 +11,9 @@ APP_KEY ?=
 # $(BUILD_DIR)/sdk; the manager is only needed for packaging.
 NBT_SDK_DIR ?= ../sdk
 NBT_MGR_DIR ?= ../manager
-# QNX toolchain: the environment script to source, and the folder holding
-# the head unit's libscreen.so.
-QNX_ENV ?=
-QNX_SCREEN_LIBDIR ?=
 
 CC ?= gcc
 CXX ?= g++
-QCC ?= qcc
-QNX_STRIP ?= ntoarmv7-strip
-QNX_READELF ?= ntoarmv7-readelf
-QNX_NM ?= ntoarmv7-nm
 
 NBT_SDK_BUILD_DIR := $(abspath $(BUILD_DIR))/sdk
 include $(NBT_SDK_DIR)/nbt-sdk.mk
@@ -50,10 +42,9 @@ app_objs = $(patsubst %.cpp,$(OBJ_DIR)/$(1)/%.o,$(APP_SRC))
 
 HOST_APP := $(BUILD_DIR)/nbt-snes9x-host
 ASAN_APP := $(BUILD_DIR)/nbt-snes9x-asan
-QNX_APP := $(BUILD_DIR)/nbt-snes9x-qnx
 ASAN_FLAGS := -O1 -g -fsanitize=address -fno-omit-frame-pointer
 
-.PHONY: all host test test-asan check-static-init format qnx qnx-env qnx-check package package-args clean
+.PHONY: all host test test-asan check-static-init format package package-args notice clean
 
 all: host test
 
@@ -135,75 +126,13 @@ check-static-init: $(call app_objs,host)
 	+@$(NBT_SDK_MAKE) check-static-init
 
 format:
-	clang-format -i src/*.cpp src/*.hpp src/compat/*.h src/compat/*.cpp tests/*.cpp
+	clang-format -i src/*.cpp src/*.hpp src/compat/*.h tests/*.cpp
 
-# --- QNX (head unit, ARMv7) ---
-qnx-env:
-	@test -n "$(QNX_ENV)" || { echo "QNX_ENV is not set: make QNX_ENV=/path/to/qnx-env.sh ..."; exit 1; }
-	@test -r "$(QNX_ENV)" || { echo "QNX_ENV=$(QNX_ENV) is not readable"; exit 1; }
-
-QNX_C_VARIANT := -Vgcc_ntoarmv7le
-QNX_CPP_VARIANT := -Vgcc_ntoarmv7le_gpp
-# qcc defines __EXCEPTIONS even with -fno-exceptions, which turns libstdc++'s
-# __try/__catch into real ones; src/compat/snes9x_qnx.h fills the toolchain's
-# gaps for the core. The head unit stops a misaligned 16-bit load with SIGBUS
-# (dev122, Immediate16): the core reads memory byte by byte, as in the module
-# build (src/compat/snes9x_aligned.h; this gcc defines no __ARM_FEATURE_UNALIGNED).
-QNX_NO_EXCEPTIONS := -Wc,-fno-exceptions -Wc,-fno-rtti -Wp,-U__EXCEPTIONS
-QNX_CORE_CXXFLAGS := $(QNX_CPP_VARIANT) -D_QNX_SOURCE -O2 -Wc,-std=c++11 $(QNX_NO_EXCEPTIONS) -w \
-	-include src/compat/snes9x_qnx.h -include src/compat/snes9x_aligned.h $(CORE_INC) $(CORE_DEFS)
-QNX_CORE_CFLAGS := $(QNX_C_VARIANT) -D_QNX_SOURCE -O2 -Wc,-std=gnu99 -w $(CORE_INC) $(CORE_DEFS)
-QNX_APP_CXXFLAGS := $(QNX_CPP_VARIANT) -D_QNX_SOURCE -O2 -Wc,-std=c++11 $(QNX_NO_EXCEPTIONS) \
-	-Wc,-Wall -Wc,-Wextra $(APP_INC)
-QNX_DEPFLAGS = -Wp,-MMD,$(@:.o=.d) -Wp,-MP -Wp,-MT,$@
-
-$(OBJ_DIR)/qnx/core/%.o: $(CORE_DIR)/%.cpp src/compat/snes9x_qnx.h src/compat/snes9x_aligned.h $(call stamp,qnx) | qnx-env
-	@mkdir -p $(dir $@)
-	. "$(QNX_ENV)" && $(QCC) $(QNX_CORE_CXXFLAGS) $(QNX_DEPFLAGS) -c $< -o $@
-
-$(OBJ_DIR)/qnx/core/%.o: $(CORE_DIR)/%.c $(call stamp,qnx) | qnx-env
-	@mkdir -p $(dir $@)
-	. "$(QNX_ENV)" && $(QCC) $(QNX_CORE_CFLAGS) $(QNX_DEPFLAGS) -c $< -o $@
-
-$(OBJ_DIR)/qnx/src/%.o: src/%.cpp $(call stamp,qnx) | qnx-env
-	@mkdir -p $(dir $@)
-	. "$(QNX_ENV)" && $(QCC) $(QNX_APP_CXXFLAGS) $(QNX_DEPFLAGS) -c $< -o $@
-
-$(OBJ_DIR)/qnx/compat/%.o: src/compat/%.cpp $(call stamp,qnx) | qnx-env
-	@mkdir -p $(dir $@)
-	. "$(QNX_ENV)" && $(QCC) $(QNX_APP_CXXFLAGS) $(QNX_DEPFLAGS) -c $< -o $@
-
-QNX_OBJ := $(call core_objs,qnx) $(call app_objs,qnx) $(OBJ_DIR)/qnx/compat/libstdcxx_qnx.o
-
-$(QNX_APP)-unstripped: $(QNX_OBJ) $(NBT_SDK_FRONT_QNX_LIBS) | qnx-env
-	@test -n "$(QNX_SCREEN_LIBDIR)" || { echo "QNX_SCREEN_LIBDIR is not set (directory with libscreen.so)"; exit 1; }
-	. "$(QNX_ENV)" && $(QCC) $(QNX_CPP_VARIANT) -lang-c++ $(QNX_OBJ) \
-		$(NBT_SDK_FRONT_QNX_LIBS) -L$(QNX_SCREEN_LIBDIR) $(NBT_SDK_QNX_LDFLAGS) $(NBT_SDK_QNX_LDLIBS) -o $@
-
-$(QNX_APP): $(QNX_APP)-unstripped
-	. "$(QNX_ENV)" && $(QNX_STRIP) -o $@ $<
-
-qnx: $(QNX_APP)
-
-# The head unit's C++ runtime predates GLIBCXX_3.4.14 (libstdc++ 6.0.13, which
-# the toolchain also ships); nothing may throw.
-QNX_OLD_RUNTIME ?= $$QNX_TARGET/armle-v7/lib/libstdc++.so.6.0.13
-
-qnx-check: qnx
-	. "$(QNX_ENV)" && python3 tools/check_qnx_imports.py $(QNX_NM) $(QNX_APP)-unstripped \
-		"$(QNX_OLD_RUNTIME)" "$$QNX_TARGET/armle-v7/lib/libc.so.3" "$$QNX_TARGET/armle-v7/lib/libm.so.2"
-	. "$(QNX_ENV)" && $(QNX_READELF) -h -d $(QNX_APP)
-	. "$(QNX_ENV)" && set -e; \
-		bad="$$($(QNX_NM) -u $(QNX_APP)-unstripped | grep -E 'GLIBCXX_3\.4\.(1[4-9]|[2-9][0-9])|CXXABI_1\.3\.([4-9]|[1-9][0-9])|__cxa_throw' || true)"; \
-		if test -n "$$bad"; then echo "Disallowed QNX ABI symbols:"; echo "$$bad"; exit 1; fi; \
-		$(QNX_NM) -D $(QNX_APP)-unstripped | grep -qw kdMain || { echo "kdMain is not exported"; exit 1; }; \
-		echo "OK: QNX binary ELF/ABI symbols verified, kdMain exported"
-
-# --- A module: built without the QNX SDP, run by nbt-runner (sdk/module) ---
-# The same core and application, compiled with Clang against picolibc and
-# libc++ (no QNX compat header: those gaps are the QNX 6.6 libstdc++'s). The
-# core reads memory byte by byte where port.h would make unaligned accesses
-# (src/compat/snes9x_aligned.h).
+# --- The head unit: a module, built without the QNX SDP, run by nbt-runner
+# (sdk/module). The same core and application, compiled with the NBT toolchain
+# against picolibc and libc++. The head unit stops a misaligned access with
+# SIGBUS: the core reads memory byte by byte where port.h would make unaligned
+# accesses (src/compat/snes9x_aligned.h). ---
 MOD_CORE_CXXFLAGS := $(NBT_MOD_CXXFLAGS) -O2 -std=c++11 -w -fno-exceptions -fno-rtti \
 	-include src/compat/snes9x_aligned.h $(CORE_INC) $(CORE_DEFS)
 MOD_CORE_CFLAGS := $(NBT_MOD_CFLAGS) -O2 -std=gnu99 -w $(CORE_INC) $(CORE_DEFS)
@@ -247,8 +176,7 @@ package-args:
 	python3 tools/package_version.py release/package.args
 
 # --- The signed package (release/package.args describes it) ---
-# The module: NBT Manager's nbt-runner runs it (bridge 1.7, runner). The QNX
-# build stays for comparisons on the car; it is not what packages carry.
+# The module: NBT Manager's nbt-runner runs it (bridge 1.7, runner).
 PACKAGE_INPUT ?= $(MOD_APP)
 PACKAGE := $(BUILD_DIR)/snes9x-$(APP_VERSION).nbt
 
@@ -263,6 +191,11 @@ package: $(PACKAGE_INPUT)
 		--output $(PACKAGE) \
 		$(PACKAGE_INPUT)
 
+# legal/NOTICE.txt (tools/make_notice.py): again when the pin, the SDK or the
+# toolchain changes.
+notice:
+	NBT_SDK_DIR=$(NBT_SDK_ROOT) NBT_TOOLCHAIN=$(NBT_TOOLCHAIN) python3 tools/make_notice.py
+
 clean:
 	rm -rf $(BUILD_DIR)
 
@@ -273,7 +206,5 @@ $(call nbt_stamp,$(call stamp,host),$(CC) $(CXX) $(CORE_INC) $(CORE_DEFS) $(CORE
 	| $(APP_INC) $(APP_CXXFLAGS),$(CC) $(CXX))
 $(call nbt_stamp,$(call stamp,asan),$(CC) $(CXX) $(CORE_INC) $(CORE_DEFS) $(CORE_CXXFLAGS) | $(CORE_CFLAGS) \
 	| $(APP_INC) $(APP_CXXFLAGS) | $(ASAN_FLAGS) -fsanitize=undefined,$(CC) $(CXX))
-$(call nbt_stamp,$(call stamp,qnx),$(if $(QNX_ENV),$(QNX_ENV) $(QCC) $(QNX_CORE_CXXFLAGS) | $(QNX_CORE_CFLAGS) \
-	| $(QNX_APP_CXXFLAGS)))
 $(call nbt_stamp,$(call stamp,mod),$(NBT_MOD_CC) $(MOD_CORE_CXXFLAGS) | $(MOD_CORE_CFLAGS) | $(MOD_APP_CXXFLAGS),, \
 	$(NBT_TOOLCHAIN)/VERSION)

@@ -1,13 +1,18 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MPL-2.0
-"""Writes legal/NOTICE.txt: the notices a binary of this application carries.
+"""Writes legal/NOTICE.txt: the notices the application's module carries.
 
-Ours (MPL-2.0), Snes9x's licence and the LGPL of its NTSC filter, then the
+Ours (MPL-2.0), Snes9x's licence and the LGPL of its NTSC filter, the
 third-party notices of the NBT App SDK it links (NBT_SDK_DIR, default
-../sdk). Run again when a dependency changes.
+../sdk), and picolibc, which the NBT toolchain's runtime links statically
+(NBT_TOOLCHAIN, default the SDK's installed release). Run again when the
+pin, the SDK or the toolchain changes.
 """
 import os
 from pathlib import Path
+import re
+import subprocess
+import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 SDK = Path(os.environ.get("NBT_SDK_DIR", ROOT.parent / "sdk"))
@@ -30,20 +35,24 @@ Snes9x's terms below. No game is included.
 """
 
 
-def sdk_third_party():
-    """The SDK's notices after its own header, disclaimer and MPL-2.0 text."""
-    sections = (SDK / "legal/NOTICE.txt").read_text().split("=" * 72)
-    keep = [s.strip("\n") for s in sections
-            if s.strip() and not s.strip().startswith(("NBTFoundry", "Head-unit risk", "MPL-2.0", "Exhibit"))]
-    # The MPL text spans several sections (its own rules): only those naming a component stay.
-    return [s for s in keep if " used by " in s.splitlines()[0]]
+def toolchain() -> Path:
+    if os.environ.get("NBT_TOOLCHAIN"):
+        return Path(os.environ["NBT_TOOLCHAIN"])
+    version = re.search(r"^NBT_TOOLCHAIN_VERSION := (\S+)", (SDK / "module/flags.mk").read_text(), re.M)
+    return SDK / "toolchain" / f"nbt-toolchain-{version.group(1)}"
 
 
 def main():
+    runtime = toolchain() / "share/licenses/picolibc"
+    if not runtime.is_dir():
+        sys.exit(f"no picolibc notices in {runtime}: set NBT_TOOLCHAIN")
+    sdk_notices = subprocess.run([sys.executable, str(SDK / "tools/third_party_notices.py")],
+                                 check=True, capture_output=True, text=True).stdout
     parts = [
         HEADER,
         "Head-unit risk and disclaimer\n\n" + (ROOT / "DISCLAIMER.md").read_text().split("\n", 1)[1],
-        "MPL-2.0\n\n" + (ROOT / "LICENSES/MPL-2.0.txt").read_text(),
+        "MPL-2.0: this application and the NBT App SDK (https://github.com/NBTFoundry/sdk)\n\n"
+        + (ROOT / "LICENSES/MPL-2.0.txt").read_text(),
         "Snes9x 1.63, the emulator (third_party/snes9x)\nhttps://github.com/snes9xgit/snes9x\n\n"
         + (CORE / "LICENSE").read_text(),
         "snes_ntsc, Snes9x's NTSC filter (third_party/snes9x/filter/snes_ntsc.c)\n"
@@ -51,7 +60,12 @@ def main():
         + (CORE / "filter/snes_ntsc-license.txt").read_text(),
         "libretro.h and libretro-common headers in Snes9x's libretro port (third_party/snes9x/libretro)\n"
         "Copyright (C) 2010-2018 The RetroArch team; MIT License, the text below with libretro.h.\n",
-    ] + [s + "\n" for s in sdk_third_party()]
+        sdk_notices,
+        "picolibc, the C library of the NBT toolchain's runtime, linked statically "
+        "(https://github.com/picolibc/picolibc)\n\n"
+        + (runtime / "COPYING.picolibc").read_text() + RULE.lstrip("\n")
+        + "picolibc's newlib-derived parts\n\n" + (runtime / "COPYING.NEWLIB").read_text(),
+    ]
     text = "\n\n" + RULE.join(p.rstrip("\n") + "\n" for p in parts)
     (ROOT / "legal/NOTICE.txt").write_text(text)
     print(f"legal/NOTICE.txt: {len(parts)} sections")
