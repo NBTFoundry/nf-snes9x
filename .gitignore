@@ -7,3 +7,8 @@ build/
 *.smc
 __pycache__/
 *.pyc
+*.nbtr
+*SHA256SUMS*
+# Signing keys: never in the repository (CI reads APPS_SIGNING_KEY).
+*.pem
+*.key

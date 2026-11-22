@@ -1,9 +1,12 @@
 # SPDX-License-Identifier: MPL-2.0
 # Signed package from a vMAJOR.MINOR.PATCH tag: NBT Manager's application release
-# workflow builds the module without the QNX SDP (the SDK's own toolchain, no
-# private image), signs it with the apps key (this repository's "release"
-# environment, after approval) and publishes snes9x-X.Y.Z.nbt. The package is
-# described by release/package.args; NBT Manager's nbt-runner runs it.
+# workflow builds the module on a plain runner with the NBT toolchain release the
+# SDK pins (qnx: false, no private image), signs it with the apps key (this
+# repository's "release" environment, secret APPS_SIGNING_KEY, after approval) and
+# publishes snes9x-X.Y.Z.nbt, which NBT Manager's nbt-runner loads (bridge 1.7,
+# runner). The tag gives the version and the sequence; release/package.args
+# describes the package; release/sdk.ref names the NBTFoundry/sdk commit it builds
+# against (ci.yml reads the same file).
 name: Release
 
 on:
@@ -13,15 +16,34 @@ on:
 permissions: {}
 
 jobs:
+  pins:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      sdk: ${{ steps.read.outputs.sdk }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          sparse-checkout: release/sdk.ref
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - id: read
+        run: |
+          sdk="$(cat release/sdk.ref)"
+          [[ "$sdk" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::release/sdk.ref is not a commit"; exit 1; }
+          echo "sdk=$sdk" >>"$GITHUB_OUTPUT"
+
   release:
-    uses: NBTFoundry/manager/.github/workflows/app-release.yml@aa7b1b43d21fa80c5d0bc29030af0535ecbb6f6b # manager v0.2.0
+    needs: pins
+    uses: NBTFoundry/manager/.github/workflows/app-release.yml@edb8ad77f65a554f946958483911cc6fd6f6b084 # manager v0.3.1
     permissions:
       contents: write
       packages: read
     # The apps key is an environment secret; a called workflow sees it only so.
     secrets: inherit
     with:
-      sdk-ref: 071cd64e7600911e8ba5efae13a9308c2948be71
+      sdk-ref: ${{ needs.pins.outputs.sdk }}
       qnx: false
       build: make -j"$(nproc)" module
       payload: build/nbt-snes9x.so
