@@ -53,7 +53,7 @@ ASAN_APP := $(BUILD_DIR)/nbt-snes9x-asan
 QNX_APP := $(BUILD_DIR)/nbt-snes9x-qnx
 ASAN_FLAGS := -O1 -g -fsanitize=address -fno-omit-frame-pointer
 
-.PHONY: all host test test-asan check-static-init format qnx qnx-env qnx-check package clean
+.PHONY: all host test test-asan check-static-init format qnx qnx-env qnx-check package package-args clean
 
 all: host test
 
@@ -109,6 +109,7 @@ $(BUILD_DIR)/controls-asan: tests/controls_test.cpp src/controls.cpp src/control
 		src/controls.cpp $(NBT_SDK_FRONT_ASAN_LIBS) $(LDFLAGS) $(NBT_SDK_HOST_LDLIBS) -o $@
 
 test: host
+	python3 tools/package_version.py --check release/package.args
 	$(BUILD_DIR)/controls-test
 	NBT_SNES9X_APP=$(abspath $(HOST_APP)) NBT_MGR_DIR=$(abspath $(NBT_MGR_DIR)) \
 		python3 -m unittest discover -s tests -v
@@ -239,6 +240,11 @@ module: $(MOD_APP)
 test-align:
 	$(MAKE) BUILD_DIR=$(BUILD_DIR)/align test-asan CORE_DEFS="$(CORE_DEFS) \
 		-include $(CURDIR)/src/compat/snes9x_aligned.h -fsanitize=alignment -fno-sanitize-recover=alignment"
+
+# release/package.args's Snes9x version (tools/package_version.py): again
+# when the pin moves; `make test` fails until then.
+package-args:
+	python3 tools/package_version.py release/package.args
 
 # --- The signed package (release/package.args describes it) ---
 # The module: NBT Manager's nbt-runner runs it (bridge 1.7, runner). The QNX

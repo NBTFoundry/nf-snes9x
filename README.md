@@ -131,7 +131,10 @@ make APP_KEY=/path/to/apps-signing-key.pem package             # build/snes9x-<v
 
 `package` signs the module with NBT Manager's packer
 (`../manager/tools/package.py`, or `NBT_MGR_DIR`), described by
-`release/package.args`. Pushing a tag `vX.Y.Z` releases a signed package from CI
+`release/package.args`. It also carries what the phone app shows before an install
+(the Snes9x version, the project, the licence, notices); `make package-args`
+writes the version the pin builds, and `make test` fails when it lags.
+Pushing a tag `vX.Y.Z` releases a signed package from CI
 (`.github/workflows/release.yml`, NBT Manager's `app-release.yml` with
 `qnx: false`: a plain runner, no private image), with package sequence
 `X*1000000 + Y*1000 + Z`.

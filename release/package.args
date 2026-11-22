@@ -29,3 +29,21 @@ sound|Sound|on|on,off
 show_fps|Show FPS|off|off,on
 --setting
 debug_log|Debug log|off|off,on
+# What the phone app shows before an install (NBT Manager's PROTOCOL.md,
+# "Package information"): the Snes9x version the pin builds
+# (tools/package_version.py: `make package-args`; `make test` checks it), the
+# project, the licence and the notices.
+--property
+Snes9x|1.63
+--property
+Project|Snes9x (https://github.com/snes9xgit/snes9x)
+--property
+Licence|Snes9x licence (non-commercial)
+--text
+Super Nintendo games by Snes9x, with NBTFoundry's changes for NBT Manager.
+--text=
+--text
+Snes9x may be used and shared for non-commercial purposes only. No game is included.
+--text=
+--text
+Source, licences and notices: https://github.com/NBTFoundry/nf-snes9x

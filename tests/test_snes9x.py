@@ -215,6 +215,12 @@ class PackageTest(unittest.TestCase):
             for setting in ("aspect|Aspect|4-3|4-3,pixel,full", "region|Region|auto|auto,ntsc,pal",
                             "frameskip|Frame skip|off|off,auto,1,2"):
                 self.assertIn(f"setting={setting}\n", manifest)
+            # What the phone app shows before an install: upstream's version, project
+            # and licence, then text.
+            self.assertRegex(manifest, r"\nproperty=Snes9x\|[0-9.]+\n")
+            self.assertIn("property=Project|Snes9x (https://github.com/snes9xgit/snes9x)\n", manifest)
+            self.assertIn("property=Licence|Snes9x licence (non-commercial)\n", manifest)
+            self.assertIn("\ntext=\n", manifest)
 
 
 if __name__ == "__main__":
