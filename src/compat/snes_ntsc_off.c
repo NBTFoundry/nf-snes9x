@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MPL-2.0
 /* The module leaves out Snes9x's NTSC filter (filter/snes_ntsc.c, LGPL-2.1):
- * a module runs inside nbt-runner, which links QNX code, and LGPL code may
- * only run in a guest. The application never turns the filter on (its Filter
- * setting is the GL filter; the core's snes9x_blargg stays "disabled"), so
- * these stand-ins only let libretro.cpp link: the filter does nothing. */
+ * a module runs inside nbt-runner, which links the car's own libraries, and
+ * LGPL code may only run in a guest. The application never turns the filter
+ * on (its Filter setting is the GL filter; the core's snes9x_blargg stays
+ * "disabled"), so these stand-ins only let libretro.cpp link: the filter does
+ * nothing. */
 #include "filter/snes_ntsc.h"
 
 snes_ntsc_setup_t const snes_ntsc_monochrome = {0};

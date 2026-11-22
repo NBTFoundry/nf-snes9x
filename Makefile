@@ -128,8 +128,7 @@ check-static-init: $(call app_objs,host)
 format:
 	clang-format -i src/*.cpp src/*.hpp src/compat/*.h src/compat/*.c tests/*.cpp
 
-# --- The head unit: a module, built without the QNX SDP, run by nbt-runner
-# (sdk/module). The same core and application, compiled with the NBT toolchain
+# --- The head unit: a module, run by nbt-runner (sdk/module). The same core and application, compiled with the NBT toolchain
 # against picolibc and libc++. The head unit stops a misaligned access with
 # SIGBUS: the core reads memory byte by byte where port.h would make unaligned
 # accesses (src/compat/snes9x_aligned.h). ---
@@ -159,9 +158,9 @@ $(OBJ_DIR)/mod/compat/%.o: src/compat/%.c $(call stamp,mod) | nbt-sdk-mod
 	$(NBT_MOD_CC) $(MOD_CORE_CFLAGS) -MMD -MP -c $< -o $@
 
 # Snes9x's NTSC filter (filter/snes_ntsc.c) is LGPL-2.1, and a module runs
-# inside nbt-runner, which links QNX code: LGPL code only runs in a guest. The
-# application never turns the filter on; src/compat/snes_ntsc_off.c stands in
-# for it so libretro.cpp links. The desktop builds keep upstream's.
+# inside nbt-runner, which links the car's own libraries: LGPL code only runs
+# in a guest. The application never turns the filter on;
+# src/compat/snes_ntsc_off.c stands in for it so libretro.cpp links. The desktop builds keep upstream's.
 MOD_OBJ := $(filter-out %/filter/snes_ntsc.o,$(call core_objs,mod)) $(call app_objs,mod) \
 	$(OBJ_DIR)/mod/compat/snes_ntsc_off.o
 

@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: MPL-2.0 */
 /* Included first in every core file of the head unit's builds (the module
- * build, -mno-unaligned-access, and the QNX one). Snes9x's port.h reads
+ * build, -mno-unaligned-access). Snes9x's port.h reads
  * and writes 16- and 32-bit values with plain loads and stores on every ARM
  * target (FAST_LSB_WORD_ACCESS), at the addresses the emulated CPU uses, odd
  * ones included; the head unit stops such a process with SIGBUS. Without

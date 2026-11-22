@@ -96,7 +96,7 @@ Changed from the phone app or NBT Manager's settings page; they apply at once.
 
 ## Bridge
 
-The package carries the module (built without the QNX SDP, run by NBT
+The package carries the module (built with the NBT toolchain, run by NBT
 Manager's `nbt-runner`) and declares bridge 1.7: `show`, `controller`, `files`
 and `runner` required,
 `status`, `live-settings` and `gamepad` optional, and the files policy
@@ -122,9 +122,8 @@ The desktop build lists the games in `NBT_FILES_DIR` and keeps saves in
 `NBT_FILES_DIR=~/snes NBT_DATA_DIR=/tmp/snes9x ./build/nbt-snes9x-host`. The
 tests make a small cartridge of their own; no game is needed.
 
-Head unit (QNX 6.5 ARMv7): a module, built with the NBT toolchain
-(`make -C ../sdk toolchain` once) and nothing from the QNX SDP, which NBT
-Manager's `nbt-runner` loads (bridge 1.7, `runner`):
+Head unit: a module, built with the NBT toolchain (`make -C ../sdk toolchain`
+once), which NBT Manager's `nbt-runner` loads (bridge 1.7, `runner`):
 
 ```sh
 make -j"$(nproc)" module                                       # build/nbt-snes9x.so
@@ -132,16 +131,17 @@ make test-align                                                # the core under 
 make APP_KEY=/path/to/apps-signing-key.pem package             # build/snes9x-<version>.nbt
 ```
 
-The head unit stops a misaligned access with SIGBUS, which x86 never shows:
-the module's core reads memory byte by byte where `port.h` would make unaligned
+The head unit stops a misaligned access with SIGBUS, which x86 never shows: the
+module's core reads memory byte by byte where `port.h` would make unaligned
 accesses (`src/compat/snes9x_aligned.h`), and `test-align` runs the tests with
 that header under the alignment sanitizer. The module leaves out Snes9x's NTSC
-filter (`filter/snes_ntsc.c`, LGPL-2.1: a module runs inside `nbt-runner`,
-which links QNX code, and LGPL code only runs in a guest); the application
-never turns it on, and `src/compat/snes_ntsc_off.c` stands in for it. `package` signs the module with NBT
-Manager's packer (`../manager/tools/package.py`, or `NBT_MGR_DIR`), described
-by `release/package.args`; `make package-args` writes the Snes9x version the
-pin builds, and `make test` fails when it lags. `make notice` writes
+filter (`filter/snes_ntsc.c`, LGPL-2.1: a module runs inside `nbt-runner`, which
+links the car's own libraries, and LGPL code only runs in a guest); the
+application never turns it on, and `src/compat/snes_ntsc_off.c` stands in for
+it. `package` signs the module with NBT Manager's packer
+(`../manager/tools/package.py`, or `NBT_MGR_DIR`), described by
+`release/package.args`; `make package-args` writes the Snes9x version the pin
+builds, and `make test` fails when it lags. `make notice` writes
 `legal/NOTICE.txt`.
 
 Seven core sources have static constructors (`apu`, `bml`, `controls`,
@@ -153,12 +153,12 @@ objects have none (`check-static-init`).
 `.github/workflows/ci.yml` runs the host tests, the same under ASan/UBSan, the
 alignment check and the module build on every push and pull request. A `vX.Y.Z`
 tag runs `.github/workflows/release.yml`: NBT Manager's application release
-workflow builds the module on a plain runner with the NBT toolchain (no QNX SDP,
-no private image), signs it with the apps key after a maintainer approves the
-run (the `release` environment, secret `APPS_SIGNING_KEY`, tags `v*` only) and
-publishes `snes9x-X.Y.Z.nbt`, sequence `X*1000000 + Y*1000 + Z`.
-`release/sdk.ref` is the SDK commit both build against:
-[SDK 0.1.0](https://github.com/NBTFoundry/sdk/releases/tag/v0.1.0).
+workflow builds the module on a plain runner with the NBT toolchain (no private
+image), signs it with the apps key after a maintainer approves the run (the
+`release` environment, secret `APPS_SIGNING_KEY`, tags `v*` only) and publishes
+`snes9x-X.Y.Z.nbt`, sequence `X*1000000 + Y*1000 + Z`. `release/sdk.ref` is the
+SDK commit both build against: [SDK
+0.1.0](https://github.com/NBTFoundry/sdk/releases/tag/v0.1.0).
 
 ## To confirm on the head unit
 

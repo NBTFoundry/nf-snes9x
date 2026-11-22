@@ -1,7 +1,7 @@
 # The package description for tools/package.py (NBTFoundry/manager): one argument
 # per line. `make package` and the release workflow both use it; they add the
 # version, sequence, key, output and executable. Bridge 1.7: the payload is a
-# module built without the QNX SDP, run by NBT Manager's nbt-runner (runner);
+# module built with the NBT toolchain, run by NBT Manager's nbt-runner (runner);
 # the games come through `files`.
 --app
 snes9x

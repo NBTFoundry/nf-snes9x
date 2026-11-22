@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MPL-2.0
 # Signed package from a vMAJOR.MINOR.PATCH tag: NBT Manager's application release
 # workflow builds the module on a plain runner with the NBT toolchain release the
-# SDK pins (qnx: false, no private image), signs it with the apps key (this
+# SDK pins (no private image), signs it with the apps key (this
 # repository's "release" environment, secret APPS_SIGNING_KEY, after approval) and
 # publishes snes9x-X.Y.Z.nbt, which NBT Manager's nbt-runner loads (bridge 1.7,
 # runner). The tag gives the version and the sequence; release/package.args
