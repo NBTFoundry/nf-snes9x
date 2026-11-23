@@ -36,7 +36,7 @@ jobs:
 
   release:
     needs: pins
-    uses: NBTFoundry/manager/.github/workflows/app-release.yml@85c9cecb7f34edaf3d18033d010e629b329b83d1 # manager v0.3.1 + lfs input, qnx defaults to false
+    uses: NBTFoundry/manager/.github/workflows/app-release.yml@85c9cecb7f34edaf3d18033d010e629b329b83d1 # manager main after v0.3.1
     permissions:
       contents: write
       packages: read
