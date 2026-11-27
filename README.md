@@ -158,7 +158,7 @@ image), signs it with the apps key after a maintainer approves the run (the
 `release` environment, secret `APPS_SIGNING_KEY`, tags `v*` only) and publishes
 `snes9x-X.Y.Z.nbt`, sequence `X*1000000 + Y*1000 + Z`. `release/sdk.ref` is the
 SDK commit both build against: [SDK
-0.1.0](https://github.com/NBTFoundry/sdk/releases/tag/v0.1.0).
+0.2.0](https://github.com/NBTFoundry/sdk/releases/tag/v0.2.0).
 
 ## To confirm on the head unit
 
